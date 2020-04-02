@@ -2347,7 +2347,7 @@ void check_attr_sai_pointer(
              * Make sure that all pointers are CREATE_AND_SET.
              */
 
-            if (md->flags != SAI_ATTR_FLAGS_CREATE_AND_SET)
+            if (!SAI_HAS_FLAG_CREATE_AND_SET(md->flags))
             {
                 META_MD_ASSERT_FAIL(md, "all pointers should be CREATE_AND_SET");
             }
@@ -4048,10 +4048,14 @@ void check_switch_attributes()
     for (; meta[index] != NULL; index++)
     {
         const sai_attr_metadata_t *md = meta[index];
-        /* Gearbox added validonly attributes at switch */
-        if (md->isconditional)
+
+        /*
+         * Gerabox attributes can be marked as mandatory on create.
+         */
+
+        if (md->isoidattribute && md->ismandatoryoncreate)
         {
-            META_MD_ASSERT_FAIL(md, "attribute can't be conditional/validonly (this check can be relaxed)");
+            META_MD_ASSERT_FAIL(md, "Mandatroy on create can't be object id on SWITCH");
         }
     }
 }
@@ -4096,6 +4100,21 @@ void check_quad_api_pointers(
     META_ASSERT_NOT_NULL(oi->remove);
     META_ASSERT_NOT_NULL(oi->set);
     META_ASSERT_NOT_NULL(oi->get);
+}
+
+void check_stats_api_pointers(
+        _In_ const sai_object_type_info_t *oi)
+{
+    META_LOG_ENTER();
+
+    /*
+     * Check if stats api pointers are not NULL, for objects that don't support
+     * stats dummy functions are generated.
+     */
+
+    META_ASSERT_NOT_NULL(oi->getstats);
+    META_ASSERT_NOT_NULL(oi->getstatsext);
+    META_ASSERT_NOT_NULL(oi->clearstats);
 }
 
 void check_object_id_non_object_id(
@@ -4270,6 +4289,7 @@ void check_single_object_info(
     META_LOG_ENTER();
 
     check_quad_api_pointers(oi);
+    check_stats_api_pointers(oi);
     check_object_id_non_object_id(oi);
     check_enum_to_attr_map(oi);
     check_object_ro_list(oi);

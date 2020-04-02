@@ -210,7 +210,6 @@ typedef enum _sai_port_ptp_mode_t
  */
 typedef enum _sai_port_interface_type_t
 {
-
     /** Interface type none */
     SAI_PORT_INTERFACE_TYPE_NONE,
 
@@ -257,6 +256,19 @@ typedef enum _sai_port_link_training_failure_status_t
     /** Link training timeout */
     SAI_PORT_LINK_TRAINING_FAILURE_STATUS_TIME_OUT
 } sai_port_link_training_failure_status_t;
+
+/**
+ * @brief Attribute data for #SAI_PORT_ATTR_LINK_TRAINING_RX_STATUS
+ * Used for receiver status for link training
+ */
+typedef enum _sai_port_link_training_rx_status_t
+{
+    /** Receiver not trained */
+    SAI_PORT_LINK_TRAINING_RX_STATUS_NOT_TRAINED,
+
+    /** Receiver trained */
+    SAI_PORT_LINK_TRAINING_RX_STATUS_TRAINED,
+} sai_port_link_training_rx_status_t;
 
 /**
  * @brief Attribute data for #SAI_PORT_ATTR_PRBS_CONFIG
@@ -1337,7 +1349,7 @@ typedef enum _sai_port_attr_t
     /**
      * @brief Configure Interface type
      *
-     * validonly SAI_SWITCH_ATTR_TYPE == SAI_SWITCH_TYPE_PHY
+     * Valid when SAI_SWITCH_ATTR_TYPE == SAI_SWITCH_TYPE_PHY
      *
      * @type sai_port_interface_type_t
      * @flags CREATE_AND_SET
@@ -1382,9 +1394,18 @@ typedef enum _sai_port_attr_t
     SAI_PORT_ATTR_LINK_TRAINING_FAILURE_STATUS,
 
     /**
+     * @brief Status whether the receiver trained or not trained to receive data
+     *
+     * @type sai_port_link_training_rx_status_t
+     * @flags READ_ONLY
+     */
+    SAI_PORT_ATTR_LINK_TRAINING_RX_STATUS,
+
+    /**
      * @brief Attribute data for #SAI_PORT_ATTR_PRBS_CONFIG
      *
      * PRBS configuration to enable transmitter, receiver or both
+     *
      * @type sai_port_prbs_config_t
      * @flags CREATE_AND_SET
      * @default SAI_PORT_PRBS_CONFIG_DISABLE
@@ -1395,6 +1416,7 @@ typedef enum _sai_port_attr_t
      * @brief Attribute data for #SAI_PORT_ATTR_PRBS_LOCK_STATUS
      *
      * PRBS lock status: 1 for locked, 0 for unlocked
+     *
      * @type bool
      * @flags READ_ONLY
      */
@@ -1404,6 +1426,7 @@ typedef enum _sai_port_attr_t
      * @brief Attribute data for #SAI_PORT_ATTR_PRBS_LOCK_LOSS_STATUS
      *
      * PRBS unlocked status since last read: 1 for lock loss, 0 for no lock loss
+     *
      * @type bool
      * @flags READ_ONLY
      */
@@ -1413,10 +1436,20 @@ typedef enum _sai_port_attr_t
      * @brief Attribute data for #SAI_PORT_ATTR_AUTO_NEG_STATUS
      *
      * Auto negotiation (AN) done state: 0 for AN in progress, 0 for AN done
+     *
      * @type bool
      * @flags READ_ONLY
      */
     SAI_PORT_ATTR_AUTO_NEG_STATUS,
+
+    /**
+     * @brief To enable/disable Decrement TTL
+     *
+     * @type bool
+     * @flags CREATE_AND_SET
+     * @default false
+     */
+    SAI_PORT_ATTR_DECREMENT_TTL,
 
     /**
      * @brief End of attributes
@@ -1948,6 +1981,9 @@ typedef enum _sai_port_stat_t
     /** Port stat in drop reasons range start */
     SAI_PORT_STAT_IN_DROP_REASON_RANGE_BASE = 0x00001000,
 
+    /** Get in port packet drops configured by debug counter API at index 0 */
+    SAI_PORT_STAT_IN_CONFIGURED_DROP_REASONS_0_DROPPED_PKTS = SAI_PORT_STAT_IN_DROP_REASON_RANGE_BASE,
+
     /** Get in port packet drops configured by debug counter API at index 1 */
     SAI_PORT_STAT_IN_CONFIGURED_DROP_REASONS_1_DROPPED_PKTS,
 
@@ -1974,6 +2010,9 @@ typedef enum _sai_port_stat_t
 
     /** Port stat out drop reasons range start */
     SAI_PORT_STAT_OUT_DROP_REASON_RANGE_BASE = 0x00002000,
+
+    /** Get out port packet drops configured by debug counter API at index 0 */
+    SAI_PORT_STAT_OUT_CONFIGURED_DROP_REASONS_0_DROPPED_PKTS = SAI_PORT_STAT_OUT_DROP_REASON_RANGE_BASE,
 
     /** Get out port packet drops configured by debug counter API at index 1 */
     SAI_PORT_STAT_OUT_CONFIGURED_DROP_REASONS_1_DROPPED_PKTS,

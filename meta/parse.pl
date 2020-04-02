@@ -469,7 +469,7 @@ sub ProcessEnumSection
         my @values = @{ $SAI_ENUMS{$enumtypename}{values} };
 
         @values = grep(!/^SAI_\w+_(START|END)$/, @values);
-        @values = grep(!/^SAI_\w+(CUSTOM_RANGE_BASE)$/, @values);
+        @values = grep(!/^SAI_\w+(RANGE_BASE)$/, @values);
 
         if ($enumtypename =~ /^(sai_\w+)_t$/)
         {
@@ -478,7 +478,7 @@ sub ProcessEnumSection
             # allow empty enum on extensions
             if ($valuescount == 0 and not $enumtypename =~ /_extensions_t$/)
             {
-                LogError "enum $enumtypename is empty, after removing suffixed entries _START/_END/_CUSTOM_RANGE_BASE";
+                LogError "enum $enumtypename is empty, after removing suffixed entries _START/_END/_RANGE_BASE";
                 LogError "  those suffixes are reserved for range markers and are removed by metadata parser, don't use them";
                 LogError "  as actual part of valid enum name, take a look at sai_udf_group_type_t for valid usage";
                 next;
@@ -2624,6 +2624,108 @@ sub ProcessGet
     return "sai_metadata_generic_get_$ot";
 }
 
+sub ProcessGetStats
+{
+    my $struct = shift;
+    my $ot = shift;
+
+    my $small = lc($1) if $ot =~ /SAI_OBJECT_TYPE_(\w+)/;
+
+    my $api = $OBJTOAPIMAP{$ot};
+
+    WriteSource "sai_status_t sai_metadata_generic_get_stats_$ot(";
+    WriteSource "_In_ const sai_object_meta_key_t *meta_key,";
+    WriteSource "_In_ uint32_t number_of_counters,";
+    WriteSource "_In_ const sai_stat_id_t *counter_ids,";
+    WriteSource "_Out_ uint64_t *counters)";
+    WriteSource "{";
+
+    if (IsSpecialObject($ot) or not defined $OBJECT_TYPE_TO_STATS_MAP{$small})
+    {
+        WriteSource "return SAI_STATUS_NOT_SUPPORTED;";
+    }
+    elsif (not defined $struct)
+    {
+        WriteSource "return sai_metadata_sai_${api}_api->get_${small}_stats(meta_key->objectkey.key.object_id, number_of_counters, counter_ids, counters);";
+    }
+    else
+    {
+        WriteSource "return sai_metadata_sai_${api}_api->get_${small}_stats(&meta_key->objectkey.key.$small, number_of_counters, counter_ids, counters);";
+    }
+
+    WriteSource "}";
+
+    return "sai_metadata_generic_get_stats_$ot";
+}
+
+sub ProcessGetStatsExt
+{
+    my $struct = shift;
+    my $ot = shift;
+
+    my $small = lc($1) if $ot =~ /SAI_OBJECT_TYPE_(\w+)/;
+
+    my $api = $OBJTOAPIMAP{$ot};
+
+    WriteSource "sai_status_t sai_metadata_generic_get_stats_ext_$ot(";
+    WriteSource "_In_ const sai_object_meta_key_t *meta_key,";
+    WriteSource "_In_ uint32_t number_of_counters,";
+    WriteSource "_In_ const sai_stat_id_t *counter_ids,";
+    WriteSource "_In_ sai_stats_mode_t mode,";
+    WriteSource "_Out_ uint64_t *counters)";
+    WriteSource "{";
+
+    if (IsSpecialObject($ot) or not defined $OBJECT_TYPE_TO_STATS_MAP{$small})
+    {
+        WriteSource "return SAI_STATUS_NOT_SUPPORTED;";
+    }
+    elsif (not defined $struct)
+    {
+        WriteSource "return sai_metadata_sai_${api}_api->get_${small}_stats_ext(meta_key->objectkey.key.object_id, number_of_counters, counter_ids, mode, counters);";
+    }
+    else
+    {
+        WriteSource "return sai_metadata_sai_${api}_api->get_${small}_stats_ext(&meta_key->objectkey.key.$small, number_of_counters, counter_ids, mode, counters);";
+    }
+
+    WriteSource "}";
+
+    return "sai_metadata_generic_get_stats_ext_$ot";
+}
+
+sub ProcessClearStats
+{
+    my $struct = shift;
+    my $ot = shift;
+
+    my $small = lc($1) if $ot =~ /SAI_OBJECT_TYPE_(\w+)/;
+
+    my $api = $OBJTOAPIMAP{$ot};
+
+    WriteSource "sai_status_t sai_metadata_generic_clear_stats_$ot(";
+    WriteSource "_In_ const sai_object_meta_key_t *meta_key,";
+    WriteSource "_In_ uint32_t number_of_counters,";
+    WriteSource "_In_ const sai_stat_id_t *counter_ids)";
+    WriteSource "{";
+
+    if (IsSpecialObject($ot) or not defined $OBJECT_TYPE_TO_STATS_MAP{$small})
+    {
+        WriteSource "return SAI_STATUS_NOT_SUPPORTED;";
+    }
+    elsif (not defined $struct)
+    {
+        WriteSource "return sai_metadata_sai_${api}_api->clear_${small}_stats(meta_key->objectkey.key.object_id, number_of_counters, counter_ids);";
+    }
+    else
+    {
+        WriteSource "return sai_metadata_sai_${api}_api->clear_${small}_stats(&meta_key->objectkey.key.$small, number_of_counters, counter_ids);";
+    }
+
+    WriteSource "}";
+
+    return "sai_metadata_generic_clear_stats_$ot";
+}
+
 sub CreateApis
 {
     WriteSectionComment "Global SAI API declarations";
@@ -2786,10 +2888,14 @@ sub CreateObjectInfo
         my $statenum            = ProcessStatEnum($shortot);
         my $attrmetalength      = @{ $SAI_ENUMS{$type}{values} };
 
-        my $create = ProcessCreate($struct, $ot);
-        my $remove = ProcessRemove($struct, $ot);
-        my $set = ProcessSet($struct, $ot);
-        my $get = ProcessGet($struct, $ot);
+        my $create      = ProcessCreate($struct, $ot);
+        my $remove      = ProcessRemove($struct, $ot);
+        my $set         = ProcessSet($struct, $ot);
+        my $get         = ProcessGet($struct, $ot);
+
+        my $getstats    = ProcessGetStats($struct, $ot);
+        my $getstatsext = ProcessGetStatsExt($struct, $ot);
+        my $clearstats  = ProcessClearStats($struct, $ot);
 
         WriteHeader "extern const sai_object_type_info_t sai_metadata_object_type_info_$ot;";
 
@@ -2812,6 +2918,9 @@ sub CreateObjectInfo
         WriteSource ".remove               = $remove,";
         WriteSource ".set                  = $set,";
         WriteSource ".get                  = $get,";
+        WriteSource ".getstats             = $getstats,";
+        WriteSource ".getstatsext          = $getstatsext,";
+        WriteSource ".clearstats           = $clearstats,";
         WriteSource ".isexperimental       = $isexperimental,";
         WriteSource ".statenum             = $statenum,";
 
